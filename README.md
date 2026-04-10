@@ -1,5 +1,18 @@
 # Praksisk eksamen forberedelse
 
+## Get started
+
+### Prerequisites
+
+- Python 3 installed
+
+### Running
+
+- Linux
+    - Run `$ python3 app.py`
+- Windows Desktop
+    - Run `> python.exe app.py`
+
 ## FAQ
 
 ## What is `vendor/moeserver`?
