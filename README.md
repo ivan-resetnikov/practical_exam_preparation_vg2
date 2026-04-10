@@ -16,6 +16,6 @@ It's been used in 3 commertial projects each iterating on its feature set, this 
 
 I deemed it good enough for this exam.
 
-## Legal
+## Legal notice
 
 > Praksisk eksamen forberedelse Copyright (c) 2026 ved Reshetnikov Ivan - alle rettigheter forbeholdt.
