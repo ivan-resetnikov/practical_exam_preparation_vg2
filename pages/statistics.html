@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistics</title>
+</head>
+<body>
+    <h1>{{ translate text="Statistics" }}</h1>
+
+    <p>General statistics about our work.</p>
+
+    <h2>Pie chart</h2>
+    <figure>
+        <div id="pie-chart"></div>
+        <figcaption>
+            <h3>{{ translate text="Problems" }}:</h3>
+            <p style="text-indent: 2em;">{{ translate text="Total" }}: {{ pie_total_problems }}</p>
+            <p style="text-indent: 2em;">{{ translate text="Haven't started dealing with" }}: {{ pie_not_started }}</p>
+            <p style="text-indent: 2em;">{{ translate text="Dealing with as of now" }}: {{ pie_dealing_with }}</p>
+            <p style="text-indent: 2em;">{{ translate text="Solved"}}: {{ pie_solved_problems }}</p>
+            <p style="text-indent: 2em;">{{ translate text="Average time until a response" }}: {{ pie_avg_response_time }}</p>
+            <p style="text-indent: 2em;">{{ translate text="Average time until solved" }}: {{ pie_avg_solution_time }}</p>
+        </figcaption>
+    </figure>
+
+</body>
+<style>
+
+#pie-chart {
+    width: 10em;
+    height: 10em;
+    background: conic-gradient(red 36deg, orange 36deg 170deg, yellow 170deg);
+    border-radius: 50%;
+}
+
+</style>
+<script>
+const pie_chart = document.querySelector("#pie-chart")
+
+// NOTE(vanya): We'll see what I say about a file per page
+// function add_and_run_script(p_path) {
+//     const s = document.createElement("script");
+//     s.src = p_path;
+//     s.defer = true;
+//     document.body.appendChild(s);
+// }
+
+// window.addEventListener("load", () => {
+//     add_and_run_script("/public/js/pages/statistics.js")
+// });
+
+</script>
+</html>

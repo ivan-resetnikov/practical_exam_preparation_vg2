@@ -12,6 +12,7 @@ import os
 import importlib
 import re
 import inspect
+import json
 
 from collections.abc import Callable
 
@@ -21,7 +22,7 @@ LIB_NAME: str = "moeserver"
 
 
 logger = logging.getLogger(LIB_NAME)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
 
 selector = selectors.DefaultSelector()
 
@@ -35,7 +36,8 @@ class Error:
     SERVER_BIND_FAIL: int = 2
     CLIENT_CONNECTION_BROKEN: int = 3
 
-    ROUTE_NOT_FOUND: int = 4
+    NOT_FOUND: int = 4
+    REJECTED: int = 5
 
 
 
@@ -65,6 +67,7 @@ class App:
         self.components: list[Component] = []
         self.public_dir_path: str = ""
         self.public_dir_route: str = ""
+        self.default_language: str = ""
 
 
     def route(self, p_route_path: str) -> Callable:
@@ -113,7 +116,7 @@ class App:
         return Error.SUCCESS
 
 
-    def render_html(self, p_html_source: str, p_extra_replace: dict) -> str:
+    def render_html(self, p_html_source: str, p_renderpass_params: dict, p_paste_keys: dict) -> str:
         rendered_source: str = p_html_source
 
         # NOTE(vanya): Replace all component syntax with registered components until none are lefr
@@ -143,20 +146,15 @@ class App:
             found_requested_component: bool = False
             for component in self.components:
                 if component.name == requested_component_name:
-                    # NOTE(vanya): Call component rendering function with argments if parsed any
-                    if key_value_pairs:
-                        render_callback_signature = inspect.signature(component.render_callback)
-                        if len(render_callback_signature.parameters) > 0:
-                            replace_str = component.render_callback(key_value_pairs)
-                    else:
-                        replace_str = component.render_callback()
+                    # NOTE(vanya): Call component rendering function with argments and renderpass parameters
+                    replace_str = component.render_callback(key_value_pairs, p_renderpass_params)
 
                     found_requested_component = True
                     break
             
             if not found_requested_component:
-                if requested_component_name in p_extra_replace:
-                    replace_str = p_extra_replace[requested_component_name]
+                if requested_component_name in p_paste_keys:
+                    replace_str = p_paste_keys[requested_component_name]
                 else:
                     logger.error(f"Could not find a requested component `{requested_component_name}`.")
 
@@ -166,9 +164,9 @@ class App:
         return rendered_source
 
 
-    def render_html_file(self, p_html_file_path: str, **p_kargs: dict) -> str:
+    def render_html_file(self, p_html_file_path: str, p_renderpass_params: dict={}, p_paste_keys: dict={}) -> str:
         with open(p_html_file_path, "r", encoding="utf-8") as f:
-            return self.render_html(f.read(), p_kargs)
+            return self.render_html(f.read(), p_renderpass_params, p_paste_keys)
     
 
     def load_file_bytes(self, p_file_path: str) -> bytes:
@@ -176,13 +174,42 @@ class App:
             return f.read()
     
 
+    def enable_translation(self, p_translation_file_path: str, p_default_language: str) -> Error:
+        self.default_language = p_default_language
+        self.translation_file_path = p_translation_file_path
+
+        @self.component("translate")
+        def translate(p_args: dict, p_renderpass_params: dict) -> str:
+            text_to_translate: str = p_args.get("text", "")
+            requested_language: str = p_renderpass_params.get("requested_language", self.default_language)
+
+            if self.default_language == requested_language:
+                return text_to_translate
+
+            with open(self.translation_file_path, "r", encoding="utf-8") as f:
+                translation_lut: dict = json.load(f)
+            
+            if requested_language in translation_lut:
+                language_translation_lut: dict = translation_lut[requested_language]
+                if text_to_translate in language_translation_lut:
+                    return language_translation_lut[text_to_translate]
+                else:
+                    logger.warning(f"Requested language for translation `{requested_language}` does not have the key to replace `{text_to_translate}` with.")
+                    logger.info("Returning translation key.")
+                    return text_to_translate
+            else:
+                logger.warning(f"Requested language for translation `{requested_language}` was not found in the translation file.")
+                logger.info("Returning translation key.")
+                return text_to_translate
+        
+
     def set_public_dir(self, p_path: str, p_route_prefix: str, p_access_policy: PublicAccessPolicy, p_serve_callback: Callable=None) -> Error:
         self.public_dir_path = p_path
         self.public_dir_route = p_route_prefix
         self.public_access_policy = p_access_policy
         self.public_access_serve_callback = p_serve_callback
 
-        match p_access_policy:
+        match self.public_access_policy:
             case PublicAccessPolicy.SERVE_NONE:
                 pass
 
@@ -397,12 +424,18 @@ class App:
             logger.debug(f"\t+{len(body_bytes)} bytes of body")
 
             # NOTE(vanya): Handle request
+            header_dict: dict = {}
+            for header_line in header_lines:
+                key, value = tuple(header_line.split(": "))
+                header_dict[key] = value
+
             request_method, request_path, request_protocol_version = tuple(request_line.split(" ", 2))
 
             response_bytes: bytes = self.get_request_response(
                 request_method,
                 request_path,
                 request_protocol_version,
+                header_dict,
                 body_bytes
             )
 
@@ -423,10 +456,10 @@ class App:
             return Error.CLIENT_CONNECTION_BROKEN
 
 
-    def get_request_response(self, p_method: str, p_path: str, p_protocol_version: str, p_data: bytes) -> bytes:
+    def get_request_response(self, p_method: str, p_path: str, p_protocol_version: str, p_header_data: dict, p_data: bytes) -> bytes:
         match p_method:
             case "GET":
-                return self.handle_GET_response(p_path, p_protocol_version, p_data)
+                return self.handle_GET_response(p_path, p_protocol_version, p_header_data, p_data)
             
             case "POST":
                 # TODO(vanya)
@@ -456,8 +489,8 @@ class App:
                 return b"HTTP/1.1 405 Method Not Allowed\r\n\r\n"
     
 
-    def handle_GET_response(self, p_path: str, _p_protocol_version: str, _p_extra_data: bytes) -> bytes:
-        status_line, header_lines, body = self.get_route_response(p_path)
+    def handle_GET_response(self, p_path: str, _p_protocol_version: str, p_header_data: dict, p_extra_data: bytes) -> bytes:
+        status_line, header_lines, body = self.get_route_response(p_path, p_header_data, p_extra_data)
 
         # NOTE(vanya): Debug-print response
         logger.debug("Response:")
@@ -487,12 +520,12 @@ class App:
         )
     
 
-    def get_route_response(self, p_path: str) -> tuple[str, list[str], bytes]:
+    def get_route_response(self, p_path: str, p_header_data: dict, p_extra_data: bytes) -> tuple[str, list[str], bytes]:
         status_line: str = ""
         header_lines: list[str] = []
         body: bytes = b""
 
-        route_data, error = self.get_route_bytes_or_404(p_path)
+        route_data, error = self.get_route_bytes_or_404(p_path, p_header_data, p_extra_data)
 
         match error:
             case Error.SUCCESS:
@@ -502,15 +535,18 @@ class App:
                 
                 body = route_data
             
-            case Error.ROUTE_NOT_FOUND:
+            case Error.NOT_FOUND:
                 status_line = "HTTP/1.1 404 Not Found"
+            
+            case Error.REJECTED:
+                status_line = "HTTP/1.1 403 Rejected"
         
         return status_line, header_lines, body
     
 
-    def get_route_bytes_or_404(self, p_path: str) -> tuple[bytes, Error]:
+    def get_route_bytes_or_404(self, p_path: str, p_header_data: dict, p_request_data: bytes) -> tuple[bytes, Error]:
         # NOTE(vanya): Serve hard-coded routes
-        requested_route_bytes, error = self.get_route(p_path)
+        requested_route_bytes, error = self.get_route(p_path, p_header_data, p_request_data)
         if error == Error.SUCCESS:
             logger.debug(f"Serving route `{p_path}`")
             return (requested_route_bytes, Error.SUCCESS)
@@ -519,17 +555,27 @@ class App:
         
         if is_in_public_dir:
             # NOTE(vanya): Serve 404 asset
+
             rel_path: str = os.path.join(self.public_dir_path, p_path.removeprefix(self.public_dir_route))
             if os.path.exists(rel_path):
-                return (self.load_file_bytes(rel_path), Error.SUCCESS)
+                match self.public_access_policy:
+                    case PublicAccessPolicy.SERVE_NONE:
+                        return (b"", Error.REJECTED)
+
+                    case PublicAccessPolicy.SERVE_ALL:
+                        return (self.load_file_bytes(rel_path), Error.SUCCESS)
+                    
+                    case PublicAccessPolicy.SERVE_CALLBACK:
+                        return self.public_access_serve_callback(p_path, p_header_data, p_request_data)
             else:
                 # TODO(vanya): Custom 404 for public assets
                 logger.warning(f"Asset route not found `{p_path}`.")
-                return (b"404 - Route not found", Error.ROUTE_NOT_FOUND)
+                return (b"404 - Route not found", Error.NOT_FOUND)
 
         else:
             # NOTE(vanya): Serve 404 page (not asset)
-            route_404_bytes, error = self.get_route("404")
+
+            route_404_bytes, error = self.get_route("404", p_header_data, p_request_data)
             if error == Error.SUCCESS:
                 logger.info(f"Serving route `404` for requested path `{p_path}`")
                 return (route_404_bytes, Error.SUCCESS)
@@ -540,8 +586,14 @@ class App:
         return (b"404 - Route not found", Error.SUCCESS)
     
 
-    def get_route(self, p_path: str) -> tuple[bytes, Error]:
+    def get_route(self, p_path: str, p_header_data: dict, p_request_data: bytes) -> tuple[bytes, Error]:
         logger.debug(f"Matching registered routes for requested path `{p_path}`")
+
+        requested_language: str = p_header_data.get("Accept-Language", self.default_language).split(",", 1)[0]
+
+        renderpass_params: dict = {
+            "requested_language": requested_language
+        }
 
         for route in self.routes:
             catchall_params: dict = {}
@@ -567,22 +619,20 @@ class App:
                     part_matched = True
 
                 else:
-                    part_matched = route_path_part == requested_path_part
+                    part_matched = (route_path_part == requested_path_part)
                 
                 if part_matched:
                     # NOTE(vanya): Check if matched the entire path
                     if part_index_to_check + 1 == len(route_path_parts):
-                        if catchall_params:
-                            return (route.render_callback(catchall_params), Error.SUCCESS)
-                        else:
-                            return (route.render_callback(), Error.SUCCESS)
+                        # NOTE(vanya): Render route
+                        return (route.render_callback(renderpass_params, catchall_params), Error.SUCCESS)
                 else:
                     # NOTE(vanya): Route didn't match
                     break
                 
                 part_index_to_check += 1
         
-        return (b"404", Error.ROUTE_NOT_FOUND)
+        return (b"404", Error.NOT_FOUND)
     
 
     def is_valid_python_module_name(self, p_name: str) -> bool:

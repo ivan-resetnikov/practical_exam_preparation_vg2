@@ -1,0 +1,22 @@
+{
+    "en-US": {
+        "Statistics": "Statistics",
+        "Problems": "Problems",
+        "Total": "Total",
+        "Haven't started dealing with": "Have't started dealing with",
+        "Dealing with as of now": "Dealing with as of now",
+        "Solved": "Solved",
+        "Average time until a response": "Average time until a response",
+        "Average time until solved": "Average time until solved"
+    },
+    "nb": {
+        "Statistics": "Statstikk",
+        "Problems": "Problemer",
+        "Total": "Totalt",
+        "Haven't started dealing with": "Ikke påbegynt",
+        "Dealing with as of now": "Under behandling",
+        "Solved": "Løst",
+        "Average time until a response": "Gjennomsnittlig tid til første svar",
+        "Average time until solved": "Gjennomsnittlig tid til løsning"
+    }
+}
