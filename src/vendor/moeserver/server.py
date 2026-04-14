@@ -135,7 +135,7 @@ class App:
             component_inner_syntax: str = component_syntax.removeprefix("{{").removesuffix("}}").strip()
             component_inner_tokens: list[str] = component_inner_syntax.split(" ")
 
-            key_value_pairs = dict(re.findall(r'(\w+)="([^"]*)"', component_inner_syntax))
+            args = dict(re.findall(r'(\w+)="([^"]*)"', component_inner_syntax))
 
             requested_component_name: str = component_inner_syntax.split(None, 1)[0]
 
@@ -147,7 +147,7 @@ class App:
             for component in self.components:
                 if component.name == requested_component_name:
                     # NOTE(vanya): Call component rendering function with argments and renderpass parameters
-                    replace_str = component.render_callback(key_value_pairs, p_renderpass_params)
+                    replace_str = component.render_callback(args, p_renderpass_params)
 
                     found_requested_component = True
                     break
@@ -269,7 +269,7 @@ class App:
                         logger.error(f"Module `{module_path}` has no function `register_components_for_app` which usually registers the components.")
                 
                 elif entry_name.endswith(".html"):
-                    def simple_html_render_callback(p_html_file_path=entry_path) -> bytes:
+                    def simple_html_render_callback(p_args: dict, p_renderpass_params: dict, p_html_file_path=entry_path) -> bytes:
                         return self.render_html_file(p_html_file_path)
                     
                     self.register_component(entry_name, simple_html_render_callback)

@@ -1,3 +1,7 @@
+"""
+Praktisk eksamen forberedelse Copyright (c) 2026 ved Reshetnikov Ivan - alle rettigheter forbeholdt.
+"""
+
 import sqlite3
 import logging
 
