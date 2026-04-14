@@ -1,0 +1,28 @@
+{
+    "en-US": {
+        "Welcome": "Welcome",
+        "Statistics": "Statistics",
+        "Pie chart": "Pie chart",
+        "Problems": "Problems",
+        "Total": "Total",
+        "Haven't started dealing with": "Have't started dealing with",
+        "Dealing with as of now": "Dealing with as of now",
+        "Solved": "Solved",
+        "Average time until a response": "Average time until a response",
+        "Average time until solved": "Average time until solved",
+        "General statistics about our team's work.": "General statistics about our team's work.",
+        "People needing help right now": "People needing help right now"
+    },
+    "nb": {
+        "Welcome": "Velkomen",
+        "Statistics": "Statstikk",
+        "Pie chart": "Pie chart",
+        "Problems": "Problemer",
+        "Total": "Totalt",
+        "Haven't started dealing with": "Ikke p\u00e5begynt",
+        "Dealing with as of now": "Under behandling",
+        "Solved": "L\u00f8st",
+        "Average time until a response": "Gjennomsnittlig tid til f\u00f8rste svar",
+        "Average time until solved": "Gjennomsnittlig tid til l\u00f8sning"
+    }
+}
