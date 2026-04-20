@@ -3,52 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Statistics</title>
+    <title>{{ translate text="Welcome" }}</title>
 </head>
 <body>
-    <h1>{{ translate text="Statistics" }}</h1>
+    <div class="split-50-50">
+        <aside class="window">
+            <h1>{{ translate text="Statistics" }}</h1>
 
-    <p>General statistics about our work.</p>
+            <p>{{ translate text="General statistics about our team's work." }}</p>
 
-    <h2>Pie chart</h2>
-    <figure>
-        <div id="pie-chart"></div>
-        <figcaption>
+            <h2>{{ translate text="Pie chart" }}</h2>
+            <div id="pie-chart"></div>
+
             <h3>{{ translate text="Problems" }}:</h3>
-            <p style="text-indent: 2em;">{{ translate text="Total" }}: {{ pie_total_problems }}</p>
+            <p style="text-indent: 2em;">{{ translate text="Total" }}: {{ pie_total }}</p>
             <p style="text-indent: 2em;">{{ translate text="Haven't started dealing with" }}: {{ pie_not_started }}</p>
             <p style="text-indent: 2em;">{{ translate text="Dealing with as of now" }}: {{ pie_dealing_with }}</p>
-            <p style="text-indent: 2em;">{{ translate text="Solved"}}: {{ pie_solved_problems }}</p>
+            <p style="text-indent: 2em;">{{ translate text="Solved"}}: {{ pie_solved }}</p>
+            <p style="text-indent: 2em;">{{ translate text="Failed" }}: {{ pie_failed }}</p>
+            
             <p style="text-indent: 2em;">{{ translate text="Average time until a response" }}: {{ pie_avg_response_time }}</p>
             <p style="text-indent: 2em;">{{ translate text="Average time until solved" }}: {{ pie_avg_solution_time }}</p>
-        </figcaption>
-    </figure>
+            
+            <h2><img src="/public/pictures/irasutoya_victim.png" style="width: 2em;">{{ translate text="Currently helping out" }}</h2>
 
+            {{ assigned_tickets }}
+        </aside>
+        <main class="window">
+            <h1>{{ translate text="People needing help right now" }}</h1>
+
+            <figure>
+                <img src="/public/pictures/irasutoya_heroes.png"
+                    alt="Cutely drawn power rangers posing to show their coolness"
+                    style="filter: drop-shadow(0 5px 0 lightgray);"
+                >
+                <figcaption>{{ translate text="People need your help, nerd!" }}</figcaption>
+            </figure>
+<!-- 
+            <article>
+                <img src="/public/pictures/irasutoya_victim.png">
+
+            </article> -->
+
+            <h2><img src="/public/pictures/irasutoya_victim.png" style="width: 2em;">Top 20 unsolved & unassigned problem tickets</h2>
+            {{ tickets_feed }}
+        </main>
+    </div>
+    <div class="window">
+        <h1>All tickets!</h1>
+        <p>Manage your life away</p>
+        {{ all_tickets }}
+    </div>
+    {{ footer.html }}
 </body>
+<link rel="stylesheet" href="/public/css/global.css">
 <style>
 
 #pie-chart {
-    width: 10em;
-    height: 10em;
-    background: conic-gradient(red 36deg, orange 36deg 170deg, yellow 170deg);
+    width: 50%;
+    aspect-ratio: 1 / 1;
+    
     border-radius: 50%;
+
+    filter: drop-shadow(0 5px 0 lightgray);
+
+    background: conic-gradient(
+        #595959 0deg {{ pie_angle_not_started }}deg,
+        #f7af00 {{ pie_angle_not_started }}deg {{ pie_angle_dealing_with }}deg,
+        #006838 {{ pie_angle_dealing_with }}deg {{ pie_angle_solved }}deg,
+        #d40b15 {{ pie_angle_solved }}deg {{ pie_angle_failed }}deg,
+        #81ba1c {{ pie_angle_failed }}deg 360deg
+    );
 }
 
 </style>
-<script>
-const pie_chart = document.querySelector("#pie-chart")
-
-// NOTE(vanya): We'll see what I say about a file per page
-// function add_and_run_script(p_path) {
-//     const s = document.createElement("script");
-//     s.src = p_path;
-//     s.defer = true;
-//     document.body.appendChild(s);
-// }
-
-// window.addEventListener("load", () => {
-//     add_and_run_script("/public/js/pages/statistics.js")
-// });
-
-</script>
 </html>

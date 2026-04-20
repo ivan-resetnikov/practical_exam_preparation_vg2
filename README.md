@@ -1,4 +1,4 @@
-# Praksisk eksamen forberedelse
+# Praktisk eksamen forberedelse
 
 ## Get started
 
@@ -9,9 +9,9 @@
 ### Running
 
 - Linux
-    - Run `$ python3 app.py`
+    - Run `$ cd src && python3 app.py`
 - Windows Desktop
-    - Run `> python.exe app.py`
+    - Run `> cd src && python app.py`
 
 ## FAQ
 
@@ -31,4 +31,4 @@ I deemed it good enough for this exam.
 
 ## Legal notice
 
-> Praksisk eksamen forberedelse Copyright (c) 2026 ved Reshetnikov Ivan - alle rettigheter forbeholdt.
+> Praktisk eksamen forberedelse Copyright (c) 2026 ved Reshetnikov Ivan - alle rettigheter forbeholdt.

@@ -1,0 +1,8 @@
+- [x] Tickets
+    - [x] Ticket DB
+    - [x] Managment page
+- [x] Login
+    - [x] User DB
+    - [ ] ~~Password hashing~~
+    - [x] Session cookie + DB
+- [ ] Runtime database backups

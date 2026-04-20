@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ translate text="Ticket" }} #{{ ticket_id }}</title>
+</head>
+<body>
+    <main>
+        <h1>{{ translate text="Ticket" }} #{{ ticket_id }}</h1>
+
+        <form action="/ticket?id={{ ticket_id }}" method="POST" class="window">
+            <div>
+                <label for="reporter_name">{{ translate text="Reporter name" }}</label>
+                <input
+                    id="reporter_name" 
+                    name="reporter_name" 
+                    required
+                >
+            </div>
+
+            <div>
+                <label for="reporter_summary">{{ translate text="Notes" }}</label>
+                <input
+                    id="reporter_summary" 
+                    name="reporter_summary" 
+                    rows="4" 
+                    required
+                >
+            </div>
+
+            <div>
+                <label for="state">{{ translate text="Status" }}</label>
+                <select id="state" name="state" required>
+                    <option value="NOT_STARTED">{{ translate text="Not Started" }}</option>
+                    <option value="DEALING_WITH">{{ translate text="Dealing With..." }}</option>
+                    <option value="SOLVED">{{ translate text="Solved!" }}</option>
+                    <option value="FAILED">{{ translate text="Failed." }}</option>
+                </select>
+            </div>
+
+            <button type="submit">Update with this info!</button>
+        </form>
+
+    </main>
+
+    {{ footer.html }}
+</body>
+<link rel="stylesheet" href="/public/css/global.css">
+<style>
+
+body {
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 100vw;
+    min-height: 100vh;
+}
+
+main {
+    width: 50%;
+    height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+
+    justify-content: center;
+}
+
+</style>
+</html>
