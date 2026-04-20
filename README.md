@@ -1,5 +1,7 @@
 # Praktisk eksamen forberedelse
 
+![Screenshot or /statistics page](screenshot.png)
+
 ## Get started
 
 ### Prerequisites
