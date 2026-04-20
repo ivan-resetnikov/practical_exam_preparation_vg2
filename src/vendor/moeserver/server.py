@@ -7,6 +7,7 @@ server.py - HTTP server and request handling
 import socket
 import errno
 import logging
+import enum
 import selectors
 import os
 import importlib
@@ -29,7 +30,7 @@ selector = selectors.DefaultSelector()
 
 
 # NOTE(vanya): Experimenting with Result type pattern from Rust
-class Error:
+class Error(enum.Enum):
     SUCCESS: int = 0
     UNKNOWN: int = 1
 
@@ -41,16 +42,23 @@ class Error:
 
 
 
-class PublicAccessPolicy:
+class PublicAccessPolicy(enum.Enum):
     SERVE_NONE: int = 0
     SERVE_ALL: int = 1
     SERVE_CALLBACK: int = 2
 
 
 
+class RouteMethod(enum.Enum):
+    GET: int = 0
+    POST: int = 1
+
+
+
 class Route:
     path: str = ""
     render_callback: Callable = None
+    method: RouteMethod = RouteMethod.GET
 
 
 
@@ -70,7 +78,7 @@ class App:
         self.default_language: str = ""
 
 
-    def route(self, p_route_path: str) -> Callable:
+    def route_GET(self, p_route_path: str) -> Callable:
         if not p_route_path:
             logger.error("Route path cannot be empty!")
             return lambda f: f
@@ -81,6 +89,27 @@ class App:
             new_route = Route()
             new_route.path = p_route_path
             new_route.render_callback = p_user_page_render_function
+            new_route.method = RouteMethod.GET
+
+            self.routes.append(new_route)
+
+            return p_user_page_render_function
+
+        return decorator
+    
+
+    def route_POST(self, p_route_path: str) -> Callable:
+        if not p_route_path:
+            logger.error("Route path cannot be empty!")
+            return lambda f: f
+
+        def decorator(p_user_page_render_function: Callable) -> Callable:
+            logger.info(f"Registering new route `{p_route_path}`")
+
+            new_route = Route()
+            new_route.path = p_route_path
+            new_route.render_callback = p_user_page_render_function
+            new_route.method = RouteMethod.POST
 
             self.routes.append(new_route)
 
@@ -173,6 +202,82 @@ class App:
         with open(p_file_path, "rb") as f:
             return f.read()
     
+
+    def response_ok(self, p_data: bytes=b"", p_headers: list[str]=[]) -> bytes:
+        return self.assemble_HTTP_response_string(
+            "HTTP/1.1 200 OK",
+            [ f"Content-Length: {len(p_data)}" ] + p_headers,
+            p_data,
+        )
+    
+
+    def response_not_found(self, p_headers: list[str]=[]) -> bytes:
+        return self.assemble_HTTP_response_string(
+            "HTTP/1.1 404 Not Found",
+            p_headers,
+            b""
+        )
+    
+
+    def response_reject(self, p_data: bytes=b"", p_headers: list[str]=[]) -> bytes:
+        return self.assemble_HTTP_response_string(
+            "HTTP/1.1 403 Forbidden",
+            [ f"Content-Length: {len(p_data)}" ] + p_headers,
+            p_data
+        )
+
+
+    def response_redirect(self, p_destination: str, p_headers: list[str]=[]) -> bytes:
+        return self.assemble_HTTP_response_string(
+            "HTTP/1.1 302 Found",
+            [ f"Content-Length: 0", f"Location: {p_destination}", ] + p_headers,
+            b""
+        )
+    
+
+    def assemble_HTTP_response_string(self, p_status_line: str, p_header_lines: list[str], p_body: bytes) -> bytes:
+        # NOTE(vanya): Debug-print response
+        logger.debug("Response:")
+        logger.debug("\tStatus:")
+        logger.debug(f"\t\t{p_status_line}")
+
+        logger.debug("\tHeader:")
+        for header_line in p_header_lines:
+            logger.debug(f"\t\t{header_line}")
+
+            header_key, header_value = tuple(header_line.split(": "))
+
+            match header_key:
+                case _:
+                    pass
+        
+        logger.debug(f"\t+{len(p_body)} bytes of body")
+        
+        # NOTE(vanya): Combine response header lines, content delimeter, and content
+        return (
+            (
+                p_status_line + "\r\n"
+                + "\r\n".join(p_header_lines)
+                + "\r\n\r\n"
+            ).encode("utf-8")
+            + p_body
+        )
+    
+
+    def parse_cookies_from_header(self, p_header_lines: list[str]) -> dict:
+        output_cookies: dict = {}
+
+        cookies_src: str = p_header_lines.get("Cookie", "")
+
+        if not cookies_src:
+            return {}
+
+        for cookie_key_value_str in cookies_src.split("; "):
+            key, value = tuple(cookie_key_value_str.split("="))
+            output_cookies[key] = value
+        
+        return output_cookies
+
 
     def enable_translation(self, p_translation_file_path: str, p_default_language: str) -> Error:
         self.default_language = p_default_language
@@ -270,7 +375,7 @@ class App:
                 
                 elif entry_name.endswith(".html"):
                     def simple_html_render_callback(p_args: dict, p_renderpass_params: dict, p_html_file_path=entry_path) -> bytes:
-                        return self.render_html_file(p_html_file_path)
+                        return self.render_html_file(p_html_file_path, p_renderpass_params)
                     
                     self.register_component(entry_name, simple_html_render_callback)
         
@@ -349,7 +454,7 @@ class App:
                         client_socket = key.fileobj
 
                         if mask & selectors.EVENT_READ:
-                            match self.recieve_and_handle_http(key):
+                            match self.recieve_and_handle_HTTP(key):
                                 case Error.CLIENT_CONNECTION_BROKEN:
                                     selector.unregister(client_socket)
                                     client_socket.close()
@@ -391,7 +496,7 @@ class App:
         return Error.SUCCESS
     
 
-    def recieve_and_handle_http(self, p_client_key) -> Error:
+    def recieve_and_handle_HTTP(self, p_client_key) -> Error:
         client_socket: socket.socket = p_client_key.fileobj
         client_address: tuple[str, int] = p_client_key.data["address"]
 
@@ -467,11 +572,10 @@ class App:
     def get_request_response(self, p_method: str, p_path: str, p_protocol_version: str, p_header_data: dict, p_data: bytes) -> bytes:
         match p_method:
             case "GET":
-                return self.handle_GET_response(p_path, p_protocol_version, p_header_data, p_data)
+                return self.route_page_or_public_asset_or_404(p_path, p_header_data, p_data, RouteMethod.GET)[0]
             
             case "POST":
-                # TODO(vanya)
-                return b"HTTP/1.1 405 Method Not Allowed\r\n\r\n"
+                return self.route_page_or_public_asset_or_404(p_path, p_header_data, p_data, RouteMethod.POST)[0]
             
             case "PUT":
                 # TODO(vanya)
@@ -495,66 +599,11 @@ class App:
 
             case _:
                 return b"HTTP/1.1 405 Method Not Allowed\r\n\r\n"
-    
 
-    def handle_GET_response(self, p_path: str, _p_protocol_version: str, p_header_data: dict, p_extra_data: bytes) -> bytes:
-        status_line, header_lines, body = self.get_route_response(p_path, p_header_data, p_extra_data)
 
-        # NOTE(vanya): Debug-print response
-        logger.debug("Response:")
-        logger.debug("\tStatus:")
-        logger.debug(f"\t\t{status_line}")
-
-        logger.debug("\tHeader:")
-        for header_line in header_lines:
-            logger.debug(f"\t\t{header_line}")
-
-            header_key, header_value = tuple(header_line.split(": "))
-
-            match header_key:
-                case _:
-                    pass
-        
-        logger.debug(f"\t+{len(body)} bytes of body")
-        
-        # NOTE(vanya): Combine response header lines, content delimeter, and content
-        return (
-            (
-                status_line + "\r\n"
-                + "\r\n".join(header_lines)
-                + "\r\n\r\n"
-            ).encode("utf-8")
-            + body
-        )
-    
-
-    def get_route_response(self, p_path: str, p_header_data: dict, p_extra_data: bytes) -> tuple[str, list[str], bytes]:
-        status_line: str = ""
-        header_lines: list[str] = []
-        body: bytes = b""
-
-        route_data, error = self.get_route_bytes_or_404(p_path, p_header_data, p_extra_data)
-
-        match error:
-            case Error.SUCCESS:
-                status_line = "HTTP/1.1 200 OK"
-
-                header_lines.append(f"Content-Length: {len(route_data)}")
-                
-                body = route_data
-            
-            case Error.NOT_FOUND:
-                status_line = "HTTP/1.1 404 Not Found"
-            
-            case Error.REJECTED:
-                status_line = "HTTP/1.1 403 Rejected"
-        
-        return status_line, header_lines, body
-    
-
-    def get_route_bytes_or_404(self, p_path: str, p_header_data: dict, p_request_data: bytes) -> tuple[bytes, Error]:
+    def route_page_or_public_asset_or_404(self, p_path: str, p_header_data: dict, p_data: bytes, p_route_method: RouteMethod) -> tuple[bytes, Error]:
         # NOTE(vanya): Serve hard-coded routes
-        requested_route_bytes, error = self.get_route(p_path, p_header_data, p_request_data)
+        requested_route_bytes, error = self.get_route(p_path, p_header_data, p_data, p_route_method)
         if error == Error.SUCCESS:
             logger.debug(f"Serving route `{p_path}`")
             return (requested_route_bytes, Error.SUCCESS)
@@ -574,7 +623,7 @@ class App:
                         return (self.load_file_bytes(rel_path), Error.SUCCESS)
                     
                     case PublicAccessPolicy.SERVE_CALLBACK:
-                        return self.public_access_serve_callback(p_path, p_header_data, p_request_data)
+                        return self.public_access_serve_callback(p_path, p_header_data, p_data)
             else:
                 # TODO(vanya): Custom 404 for public assets
                 logger.warning(f"Asset route not found `{p_path}`.")
@@ -582,19 +631,18 @@ class App:
 
         else:
             # NOTE(vanya): Serve 404 page (not asset)
-
-            route_404_bytes, error = self.get_route("404", p_header_data, p_request_data)
+            route_404_response, error = self.get_route("404", p_header_data, p_data, RouteMethod.GET)
             if error == Error.SUCCESS:
                 logger.info(f"Serving route `404` for requested path `{p_path}`")
-                return (route_404_bytes, Error.SUCCESS)
+                return (route_404_response, Error.SUCCESS)
         
             logger.warning(f"Route not found `{p_path}`, and no custom 404 page (Searched for route `404`), serving {LIB_NAME}'s default 404 page.")
 
         # NOTE(vanya): Complete 404
-        return (b"404 - Route not found", Error.SUCCESS)
+        return (self.response_not_found(), Error.SUCCESS)
     
 
-    def get_route(self, p_path: str, p_header_data: dict, p_request_data: bytes) -> tuple[bytes, Error]:
+    def get_route(self, p_path: str, p_header_data: dict, p_data: bytes, p_route_method: RouteMethod) -> tuple[bytes, Error]:
         logger.debug(f"Matching registered routes for requested path `{p_path}`")
 
         requested_language: str = p_header_data.get("Accept-Language", self.default_language).split(",", 1)[0]
@@ -604,6 +652,10 @@ class App:
         }
 
         for route in self.routes:
+            if not route.method == p_route_method:
+                logger.debug(f"Rejecting route `{route.path}`, because route method `{route.method.name}` != `{p_route_method.name}`")
+                continue
+
             catchall_params: dict = {}
 
             route_path_parts: list[str] = route.path.split("/")
@@ -633,9 +685,11 @@ class App:
                     # NOTE(vanya): Check if matched the entire path
                     if part_index_to_check + 1 == len(route_path_parts):
                         # NOTE(vanya): Render route
-                        return (route.render_callback(renderpass_params, catchall_params), Error.SUCCESS)
+                        logger.debug(f"Routung through `{route.path}` (method: {route.method.name})")
+                        return (route.render_callback(renderpass_params, catchall_params, p_header_data, p_data), Error.SUCCESS)
                 else:
                     # NOTE(vanya): Route didn't match
+                    logger.debug(f"Route `{route.path}` didn't match.")
                     break
                 
                 part_index_to_check += 1
