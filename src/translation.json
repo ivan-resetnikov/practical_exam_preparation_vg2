@@ -16,7 +16,16 @@
         "Support ticket managment system made by Reshetnikov Ivan for a graduatory exam Informasjons Teknologi Vg2 @ Gj\u00f8vik Videreg\u00e5ende Skole": "Support ticket managment system made by Reshetnikov Ivan for a graduatory exam Informasjons Teknologi Vg2 @ Gj\u00f8vik Videreg\u00e5ende Skole",
         "Thanks to \u3044\u3089\u3059\u3068\u3084 for amazing artwork": "Thanks to \u3044\u3089\u3059\u3068\u3084 for amazing artwork",
         "Currently helping out": "Currently helping out",
-        "People need your help, nerd!": "People need your help, nerd!"
+        "People need your help, nerd!": "People need your help, nerd!",
+        
+        "Ticket": "Ticket",
+        "Reporter name": "Reporter name",
+        "Notes": "Notes",
+        "Status": "Status",
+        "Not Started": "Not Started",
+        "Dealing With...": "Dealing With...",
+        "Solved!": "Solved!",
+        "Failed.": "Failed."
     },
     "nb": {
         "Welcome": "Velkomen",
@@ -32,7 +41,16 @@
         "Average time until solved": "Gjennomsnittlig tid til l\u00f8sning",
         "Support ticket managment system made by Reshetnikov Ivan for a graduatory exam Informasjons Teknologi Vg2 @ Gj\u00f8vik Videreg\u00e5ende Skole": "Supporthenvendelsessystem laget av Reshetnikov Ivan for eksamen i Informasjonsteknologi ved Gj\u00f8vik videreg\u00e5ende skole",
         "Thanks to \u3044\u3089\u3059\u3068\u3084 for amazing artwork": "Takk til \u3044\u3089\u3059\u3068\u3084 for fantastisk kunst",
-        "Currently helping out": "Hjelper for øyeblikket",
-        "People need your help, nerd!": "Folk trenger hjelpen din, nerd!"
+        "Currently helping out": "Hjelper for \u00f8yeblikket",
+        "People need your help, nerd!": "Folk trenger hjelpen din, nerd!",
+        
+        "Ticket": "Billet",
+        "Reporter name": "Rapportørens navn",
+        "Notes": "Notater",
+        "Status": "Status",
+        "Not Started": "Ikke startet",
+        "Dealing With...": "Behandler...",
+        "Solved!": "Løst!",
+        "Failed.": "Feilet."
     }
 }

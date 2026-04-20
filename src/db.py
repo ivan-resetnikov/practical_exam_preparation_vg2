@@ -79,7 +79,7 @@ class Ticket:
             """
             INSERT INTO tickets (state, reporter_name, reporter_summary, registration_time) VALUES (?, ?, ?, ?)
             """,
-            (self.state.value, self.reporter_name, self.reporter_summary, self.registration_time)
+            (t.state.value, t.reporter_name, t.reporter_summary, t.registration_time)
         )
 
         t.primary_key = sql_cursor.lastrowid
@@ -98,7 +98,7 @@ class Ticket:
         t.state = TicketState(p_sql_row[1])
         t.reporter_name = p_sql_row[2]
         t.reporter_summary = p_sql_row[3]
-        t.registration_time = p_sql_row[4]
+        t.registration_time = datetime.datetime.strptime(p_sql_row[4], "%Y-%m-%d %H:%M:%S.%f")
 
         return t
 
@@ -177,7 +177,7 @@ class User:
             """
             INSERT INTO users (email, password) VALUES (?, ?)
             """,
-            (self.email, self.password)
+            (new_user.email, new_user.password)
         )
 
         new_user.primary_key = sql_cursor.lastrowid
