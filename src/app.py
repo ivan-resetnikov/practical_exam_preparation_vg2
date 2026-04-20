@@ -89,11 +89,22 @@ def route_post_login(p_renderpass_params: dict, p_catchall_params: dict, p_heade
             return app.response_reject("Incorrect password".encode("utf-8"))
 
 
+@app.route_GET("/ticket")
+def route_post_ticket(p_renderpass_params: dict, p_catchall_params: dict, p_header_data: dict, p_request_data: bytes) -> bytes:
+    return app.response_ok(app.render_html_file("../pages/ticket.html", p_renderpass_params).encode("utf-8"))
+
+
 @app.route_POST("/ticket")
 def route_post_ticket(p_renderpass_params: dict, p_catchall_params: dict, p_header_data: dict, p_request_data: bytes) -> bytes:
     form_params: dict = urllib.parse.parse_qs(p_request_data.decode("utf-8"))
 
-    print(form_params)
+    ticket: db.Ticket = None
+
+    ticket.reporter_name = form_params.get("reporter_name", [""])[0]
+    ticket.reporter_summary = form_params.get("reporter_summary", [""])[0]
+    ticket.state = db.TicketState[form_params.get("state", [""])[0]]
+
+    ticket.flush_to_database()
 
     return app.response_ok()
 

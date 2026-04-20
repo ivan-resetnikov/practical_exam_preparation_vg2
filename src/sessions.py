@@ -3,7 +3,7 @@ import datetime
 import secrets
 import logging
 
-from .db import User
+from db import User
 
 
 
@@ -55,7 +55,7 @@ def check_session_id_validity(p_session_id: str) -> SessionValidity:
     return SessionValidity.OK
 
 
-def begin_session(p_user: db.User, p_duration_minutes: int=15) -> Session:
+def begin_session(p_user: User, p_duration_minutes: int=15) -> Session:
     global sessions
     
     new_session = Session()
