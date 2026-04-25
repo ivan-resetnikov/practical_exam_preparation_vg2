@@ -102,14 +102,22 @@ def route_get_ticket(p_request_params: server.RequestParams) -> bytes:
         return login_redirect
     
     ticket_id: int = int(p_request_params.query.get("id", ["0"])[0])
+    
+    ticket: db.Ticket = db.load_all_tickets()[ticket_id]
 
     return app.response_ok(app.render_html_file("../pages/ticket.html", p_request_params.renderpass_params, {
         "ticket_id": str(ticket_id),
+        "reporter_name": ticket.reporter_name,
+        "reporter_summary": ticket.reporter_summary,
     }).encode("utf-8"))
 
 
 @app.route_POST("/ticket")
 def route_post_ticket(p_request_params: server.RequestParams) -> bytes:
+    login_redirect: bytes = check_session_get_login_redirect_if_needed(p_request_params.header_dict)
+    if login_redirect:
+        return login_redirect
+    
     form_params: dict = urllib.parse.parse_qs(p_request_params.data.decode("utf-8"))
 
     ticket_id: int = int(p_request_params.query.get("id", ["0"])[0])
@@ -171,11 +179,11 @@ def route_statistics(p_request_params: server.RequestParams) -> bytes:
                 parts.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
 
         if len(parts) == 1:
-            return parts[0] + " later"
+            return parts[0]
         elif len(parts) > 1:
-            return " ".join(parts[:-1]) + " and " + parts[-1] + " later"
+            return " ".join(parts[:-1]) + " and " + parts[-1]
         else:
-            return "at the same time"
+            return "Just now"
 
 
     def weights_to_pie_chart_angles(p_values: list[int]) -> list[int]:
@@ -221,7 +229,7 @@ def route_statistics(p_request_params: server.RequestParams) -> bytes:
         return root.render_html()
 
 
-    all_tickets: list[Tickets] = db.load_all_tickets()
+    all_tickets: list[db.Ticket] = db.load_all_tickets()
 
     ticket_states: dict[db.TicketState, int] = {
         db.TicketState.NOT_STARTED: 0,
@@ -229,8 +237,29 @@ def route_statistics(p_request_params: server.RequestParams) -> bytes:
         db.TicketState.SOLVED: 0,
         db.TicketState.FAILED: 0,
     }
+
+    avg_response_time: datetime.timedelta = datetime.timedelta()
+    avg_solution_time: datetime.timedelta = datetime.timedelta()
+    
+    response_time_tickets: list[datetime.timedelta] = []
+    solution_time_tickets: list[datetime.timedelta] = []
+    
     for ticket in all_tickets:
         ticket_states[ticket.state] += 1
+        
+        # Calculate response time (from registration to when work started)
+        if ticket.state in (db.TicketState.DEALING_WITH, db.TicketState.SOLVED, db.TicketState.FAILED):
+            response_time_tickets.append(datetime.datetime.now() - ticket.registration_time)
+        
+        # Calculate solution time (from registration to when ticket was solved)
+        if ticket.state == db.TicketState.SOLVED:
+            solution_time_tickets.append(datetime.datetime.now() - ticket.registration_time)
+    
+    if response_time_tickets:
+        avg_response_time = sum(response_time_tickets, datetime.timedelta()) / len(response_time_tickets)
+    
+    if solution_time_tickets:
+        avg_solution_time = sum(solution_time_tickets, datetime.timedelta()) / len(solution_time_tickets)
 
     pie_chart_angles: list[float] = weights_to_pie_chart_angles(list(ticket_states.values()))
 
@@ -244,8 +273,8 @@ def route_statistics(p_request_params: server.RequestParams) -> bytes:
                 "pie_solved": ticket_states[db.TicketState.SOLVED],
                 "pie_failed": ticket_states[db.TicketState.FAILED],
 
-                "pie_avg_response_time": 0,
-                "pie_avg_solution_time": 0,
+                "pie_avg_response_time": format_time_delta_as_human_readable(avg_response_time),
+                "pie_avg_solution_time": format_time_delta_as_human_readable(avg_solution_time),
 
                 "pie_angle_not_started": pie_chart_angles[db.TicketState.NOT_STARTED.value],
                 "pie_angle_dealing_with": pie_chart_angles[db.TicketState.DEALING_WITH.value],
