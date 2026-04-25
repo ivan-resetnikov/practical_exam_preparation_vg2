@@ -109,6 +109,10 @@ def route_get_ticket(p_request_params: server.RequestParams) -> bytes:
         "ticket_id": str(ticket_id),
         "reporter_name": ticket.reporter_name,
         "reporter_summary": ticket.reporter_summary,
+        "selected_NOT_STARTED": "selected" if ticket.state == db.TicketState.NOT_STARTED else "",
+        "selected_DEALING_WITH": "selected" if ticket.state == db.TicketState.DEALING_WITH else "",
+        "selected_SOLVED": "selected" if ticket.state == db.TicketState.SOLVED else "",
+        "selected_FAILED": "selected" if ticket.state == db.TicketState.FAILED else "",
     }).encode("utf-8"))
 
 
