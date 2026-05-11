@@ -15,6 +15,7 @@
                 <input
                     id="reporter_name" 
                     name="reporter_name" 
+                    value="{{ reporter_name }}"
                     required
                 >
             </div>
@@ -24,6 +25,7 @@
                 <input
                     id="reporter_summary" 
                     name="reporter_summary" 
+                    value="{{ reporter_summary }}"
                     rows="4" 
                     required
                 >
@@ -32,10 +34,10 @@
             <div>
                 <label for="state">{{ translate text="Status" }}</label>
                 <select id="state" name="state" required>
-                    <option value="NOT_STARTED">{{ translate text="Not Started" }}</option>
-                    <option value="DEALING_WITH">{{ translate text="Dealing With..." }}</option>
-                    <option value="SOLVED">{{ translate text="Solved!" }}</option>
-                    <option value="FAILED">{{ translate text="Failed." }}</option>
+                    <option value="NOT_STARTED" {{ selected_NOT_STARTED }}>{{ translate text="Not Started" }}</option>
+                    <option value="DEALING_WITH" {{ selected_DEALING_WITH }}>{{ translate text="Dealing With..." }}</option>
+                    <option value="SOLVED" {{ selected_SOLVED }}>{{ translate text="Solved!" }}</option>
+                    <option value="FAILED" {{ selected_FAILED }}>{{ translate text="Failed." }}</option>
                 </select>
             </div>
 

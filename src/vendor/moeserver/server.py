@@ -481,7 +481,7 @@ class App:
                                     transfered_bytes: int = client_socket.send(outgoing_bytes_left)
                                     key.data["outgoing_bytes"] = outgoing_bytes_left[transfered_bytes:]
 
-                                    logger.debug(f"Sending data until response finished. {transfered_bytes} sent, {len(key.data["outgoing_bytes"])} bytes left")
+                                    logger.debug(f"Sending data until response finished. {transfered_bytes} sent, {len(key.data['outgoing_bytes'])} bytes left")
                                 
                                 except ConnectionError:
                                     logger.debug(f"Client `{key.data['address'][0]}:{key.data['address'][1]}` disconnected.")
